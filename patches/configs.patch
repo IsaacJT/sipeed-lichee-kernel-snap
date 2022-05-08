@@ -1,8 +1,8 @@
-diff --git a/kernel/configs/snappy/containers.config b/kernel/configs/snappy/containers.config
+diff --git a/kernel/configs/containers.config b/kernel/configs/containers.config
 new file mode 100644
 index 0000000..19a4744
 --- /dev/null
-+++ b/kernel/configs/snappy/containers.config
++++ b/kernel/configs/containers.config
 @@ -0,0 +1,54 @@
 +# https://github.com/docker/docker/blob/master/contrib/check-config.sh
 +CONFIG_NAMESPACES=y
@@ -58,15 +58,15 @@ index 0000000..19a4744
 +CONFIG_DM_THIN_PROVISIONING=m
 +CONFIG_OVERLAY_FS=m
 +CONFIG_OVERLAY_FS_V1=y
-diff --git a/kernel/configs/snappy/generic.config b/kernel/configs/snappy/generic.config
+diff --git a/kernel/configs/generic.config b/kernel/configs/generic.config
 new file mode 100644
 index 0000000..70cfbdd
 --- /dev/null
-+++ b/kernel/configs/snappy/generic.config
++++ b/kernel/configs/generic.config
 @@ -0,0 +1,37 @@
-+#LP#1105230 and LP#1385510
++CONFIG_MISC_FILESYSTEMS=y
 +# CONFIG_SOUND_OSS_CORE_PRECLAIM is not set
-+# upstart requires DEVTMPFS be enabled and mounted by default.
++CONFIG_MODULES=y
 +CONFIG_DEVTMPFS=y
 +CONFIG_DEVTMPFS_MOUNT=y
 +# some /dev nodes require POSIX ACLs, like /dev/dsp
@@ -101,11 +101,11 @@ index 0000000..70cfbdd
 +# needed by dbus
 +CONFIG_SYSVIPC=y
 +CONFIG_SYSVIPC_SYSCTL=y
-diff --git a/kernel/configs/snappy/security.config b/kernel/configs/snappy/security.config
+diff --git a/kernel/configs/security.config b/kernel/configs/security.config
 new file mode 100644
 index 0000000..4f0452f
 --- /dev/null
-+++ b/kernel/configs/snappy/security.config
++++ b/kernel/configs/security.config
 @@ -0,0 +1,20 @@
 +# CONFIG_COMPAT_BRK is not set
 +# CONFIG_DEVKMEM is not set
@@ -127,11 +127,11 @@ index 0000000..4f0452f
 +# CONFIG_COMPAT_VDSO is not set
 +# CONFIG_ACPI_CUSTOM_METHOD is not set
 +CONFIG_DEFAULT_MMAP_MIN_ADDR=32768
-diff --git a/kernel/configs/snappy/snappy.config b/kernel/configs/snappy/snappy.config
+diff --git a/kernel/configs/snappy.config b/kernel/configs/snappy.config
 new file mode 100644
 index 0000000..6978397
 --- /dev/null
-+++ b/kernel/configs/snappy/snappy.config
++++ b/kernel/configs/snappy.config
 @@ -0,0 +1,28 @@
 +CONFIG_RD_BZIP2=y
 +CONFIG_RD_LZMA=y
@@ -161,11 +161,11 @@ index 0000000..6978397
 +CONFIG_SQUASHFS_LZ4=y
 +CONFIG_SQUASHFS_LZO=y
 +CONFIG_SQUASHFS_XZ=y
-diff --git a/kernel/configs/snappy/systemd.config b/kernel/configs/snappy/systemd.config
+diff --git a/kernel/configs/systemd.config b/kernel/configs/systemd.config
 new file mode 100644
 index 0000000..0e642ba
 --- /dev/null
-+++ b/kernel/configs/snappy/systemd.config
++++ b/kernel/configs/systemd.config
 @@ -0,0 +1,32 @@
 +# for more info, see REQUIREMENTS in systemd/README:
 +CONFIG_DEVTMPFS=y

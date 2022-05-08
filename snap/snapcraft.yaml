@@ -1,5 +1,4 @@
 name: visionfive-kernel
-version: '0.1'
 summary: A VisionFife BSP board kernel for use with Ubuntu Core 20
 description: |
   This is my-snap's description. You have a paragraph or two to tell the
@@ -7,6 +6,7 @@ description: |
   we live in tweetspace and your description wants to look good in the snap
   store.
 
+adopt-info: kernel
 build-base: core20
 grade: stable
 confinement: strict
@@ -26,22 +26,38 @@ parts:
       mkdir -p $SNAPCRAFT_PART_INSTALL/firmware
       cp -av ./* $SNAPCRAFT_PART_INSTALL/firmware/
   kernel:
-    plugin: kernel
+    plugin: x-kernel
     source: https://github.com/starfive-tech/linux.git
     source-branch: visionfive
     source-depth: 1
     kernel-compiler: riscv64-linux-gnu-gcc
     kernel-with-firmware: false
     kernel-image-target: Image
-    kdefconfig: [visionfive_defconfig, snappy/generic.config, snappy/security.config, snappy/systemd.config, snappy/snappy.config, snappy/containers.config]
-    override-build: |
+    kernel-initrd-channel: stable
+    kernel-initrd-compression: gz
+    kernel-device-trees:
+      - starfive/jh7100-starfive-visionfive-v1
+    kdefconfig:
+      - visionfive_defconfig
+      - generic.config
+      - containers.config
+      - security.config
+      - snappy.config
+      - systemd.config
+    override-pull: |
       snapcraftctl pull
-      git apply $SNAPCRAFT_PROJECT_DIR/patches/apparmor-5.18.patch
       git apply $SNAPCRAFT_PROJECT_DIR/patches/configs.patch
+      git apply $SNAPCRAFT_PROJECT_DIR/patches/apparmor-5.18.patch
+    override-build: |
+      cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
+      snapcraftctl build
+      VER="$(strings vmlinux|grep "Linux version 5"|cut -d' ' -f3)"
+      snapcraftctl set-version "$VER"
     build-packages:
       - dpkg-dev
       - flex
       - bison
+      - binutils
       - libssl-dev
       - libfdt-dev
       - cpio
