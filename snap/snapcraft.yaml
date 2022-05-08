@@ -1,0 +1,55 @@
+name: visionfive-kernel
+version: '0.1'
+summary: A VisionFife BSP board kernel for use with Ubuntu Core 20
+description: |
+  This is my-snap's description. You have a paragraph or two to tell the
+  most important story about your snap. Keep it under 100 words though,
+  we live in tweetspace and your description wants to look good in the snap
+  store.
+
+build-base: core20
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on:
+    - amd64
+    - riscv64
+    run-on: riscv64
+
+parts:
+  firmware:
+    plugin: nil
+    source: git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+    source-depth: 1
+    override-build: |
+      mkdir -p $SNAPCRAFT_PART_INSTALL/firmware
+      cp -av ./* $SNAPCRAFT_PART_INSTALL/firmware/
+  kernel:
+    plugin: kernel
+    source: https://github.com/starfive-tech/linux.git
+    source-branch: visionfive
+    source-depth: 1
+    kernel-compiler: riscv64-linux-gnu-gcc
+    kernel-with-firmware: false
+    kernel-image-target: Image
+    kdefconfig: [visionfive_defconfig, snappy/generic.config, snappy/security.config, snappy/systemd.config, snappy/snappy.config, snappy/containers.config]
+    override-build: |
+      snapcraftctl pull
+      git apply $SNAPCRAFT_PROJECT_DIR/patches/apparmor-5.18.patch
+      git apply $SNAPCRAFT_PROJECT_DIR/patches/configs.patch
+    build-packages:
+      - dpkg-dev
+      - flex
+      - bison
+      - libssl-dev
+      - libfdt-dev
+      - cpio
+      - binutils-riscv64-linux-gnu
+      - device-tree-compiler
+      - libelf-dev
+      - u-boot-tools
+      - on amd64:
+        - gcc-riscv64-linux-gnu
+      - else:
+        - gcc
