@@ -10,6 +10,7 @@ adopt-info: kernel
 build-base: core20
 grade: stable
 confinement: strict
+type: kernel
 
 architectures:
   - build-on:
@@ -25,10 +26,16 @@ parts:
     override-build: |
       mkdir -p $SNAPCRAFT_PART_INSTALL/firmware
       cp -av ./* $SNAPCRAFT_PART_INSTALL/firmware/
+  xtra-fw:
+    plugin: nil
+    override-build: |
+      svn checkout https://github.com/starfive-tech/linux/branches/visionfive-5.17.y/firmware $SNAPCRAFT_PART_INSTALL/firmware
+    build-packages:
+      - subversion
   kernel:
     plugin: x-kernel
-    source: https://github.com/starfive-tech/linux.git
-    source-branch: visionfive
+    source: https://github.com/AlexGhiti/riscv-linux.git
+    source-branch: int/alex/visionfive_Ubuntu-unstable-5.17.0-8.8
     source-depth: 1
     kernel-compiler: riscv64-linux-gnu-gcc
     kernel-with-firmware: false
@@ -37,17 +44,13 @@ parts:
     kernel-initrd-compression: gz
     kernel-device-trees:
       - starfive/jh7100-starfive-visionfive-v1
-    kdefconfig:
-      - visionfive_defconfig
-      - generic.config
-      - containers.config
-      - security.config
-      - snappy.config
-      - systemd.config
-    override-pull: |
-      snapcraftctl pull
-      git apply $SNAPCRAFT_PROJECT_DIR/patches/configs.patch
-      git apply $SNAPCRAFT_PROJECT_DIR/patches/apparmor-5.18.patch
+    kconfigflavour: generic
+    kconfigs:
+      - CONFIG_SYSTEM_REVOCATION_KEYS=""
+      - CONFIG_SYSTEM_TRUSTED_KEYS=""
+      - CONFIG_DEBUG_INFO_BTF=n
+      - CONFIG_DEBUG_INFO=n
+      - CONFIG_NLS_ISO8859_1=y
     override-build: |
       cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
       snapcraftctl build
