@@ -37,11 +37,12 @@ parts:
     kconfigs:
       - CONFIG_SYSTEM_REVOCATION_KEYS=""
       - CONFIG_SYSTEM_TRUSTED_KEYS=""
+      - CONFIG_DEBUG_INFO=n
     override-build: |
       cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
       snapcraftctl build
-      VER="$(strings vmlinux|grep "Linux version 5"|cut -d' ' -f3)"
-      snapcraftctl set-version "$VER"
+      # Extract version from Debian changelog
+      snapcraftctl set-version $(head -n1 ${SNAPCRAFT_PART_SRC}/debian.riscv/changelog | cut -f2 -d\( | cut -f1 -d\))
     build-packages:
       - dpkg-dev
       - flex
