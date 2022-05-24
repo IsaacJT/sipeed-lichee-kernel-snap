@@ -1,10 +1,11 @@
-name: visionfive-kernel
-summary: A VisionFife BSP board kernel for use with Ubuntu Core 20
+---
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2022 Isaac True
+
+name: sipeed-lichee-kernel
+summary: A Sipeed Lichee BSP board kernel for use with Ubuntu Core 20
 description: |
-  This is my-snap's description. You have a paragraph or two to tell the
-  most important story about your snap. Keep it under 100 words though,
-  we live in tweetspace and your description wants to look good in the snap
-  store.
+  A Sipeed Lichee BSP board kernel for use with Ubuntu Core 20
 
 adopt-info: kernel
 build-base: core20
@@ -14,43 +15,28 @@ type: kernel
 
 architectures:
   - build-on:
-    - amd64
-    - riscv64
+      - amd64
+      - riscv64
     run-on: riscv64
 
 parts:
-  firmware:
-    plugin: nil
-    source: git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-    source-depth: 1
-    override-build: |
-      mkdir -p $SNAPCRAFT_PART_INSTALL/firmware
-      cp -av ./* $SNAPCRAFT_PART_INSTALL/firmware/
-  xtra-fw:
-    plugin: nil
-    override-build: |
-      svn checkout https://github.com/starfive-tech/linux/branches/visionfive-5.17.y/firmware $SNAPCRAFT_PART_INSTALL/firmware
-    build-packages:
-      - subversion
   kernel:
     plugin: x-kernel
     source: https://github.com/AlexGhiti/riscv-linux.git
-    source-branch: int/alex/visionfive_Ubuntu-unstable-5.17.0-8.8
+    source-branch: int/alex/nezha_wifi_Ubuntu-unstable-5.17.0-8.8
     source-depth: 1
-    kernel-compiler: riscv64-linux-gnu-gcc
+    kconfigflavour: generic
+    kernel-compiler: ${SNAPCRAFT_ARCH_TRIPLET}-gcc
     kernel-with-firmware: false
     kernel-image-target: Image
     kernel-initrd-channel: stable
     kernel-initrd-compression: gz
-    kernel-device-trees:
-      - starfive/jh7100-starfive-visionfive-v1
-    kconfigflavour: generic
+    kernel-device-trees: [allwinner/sun20i-d1-lichee-rv-dock]
+    build-environment:
+      - PATH: "/usr/lib/ccache:${PATH}"
     kconfigs:
       - CONFIG_SYSTEM_REVOCATION_KEYS=""
       - CONFIG_SYSTEM_TRUSTED_KEYS=""
-      - CONFIG_DEBUG_INFO_BTF=n
-      - CONFIG_DEBUG_INFO=n
-      - CONFIG_NLS_ISO8859_1=y
     override-build: |
       cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
       snapcraftctl build
@@ -64,11 +50,23 @@ parts:
       - libssl-dev
       - libfdt-dev
       - cpio
-      - binutils-riscv64-linux-gnu
       - device-tree-compiler
       - libelf-dev
       - u-boot-tools
-      - on amd64:
-        - gcc-riscv64-linux-gnu
+      - dwarves
+      - on riscv64:
+          - gcc
+          - binutils
       - else:
-        - gcc
+          - gcc-${SNAPCRAFT_ARCH_TRIPLET}
+          - binutils-${SNAPCRAFT_ARCH_TRIPLET}
+
+  firmware:
+    plugin: nil
+    stage-packages:
+      - linux-firmware
+      - wireless-regdb
+    stage:
+      - -usr
+    organize:
+      lib/firmware: firmware
