@@ -25,24 +25,28 @@ parts:
     source: https://github.com/AlexGhiti/riscv-linux.git
     source-branch: int/alex/nezha_wifi_Ubuntu-unstable-5.17.0-8.8
     source-depth: 1
-    kconfigflavour: generic
     kernel-compiler: ${SNAPCRAFT_ARCH_TRIPLET}-gcc
     kernel-with-firmware: false
     kernel-image-target: Image
     kernel-initrd-channel: stable
     kernel-initrd-compression: gz
-    kernel-device-trees: [allwinner/sun20i-d1-lichee-rv-dock]
-    build-environment:
-      - PATH: "/usr/lib/ccache:${PATH}"
+    kernel-device-trees:
+      - allwinner/sun20i-d1-lichee-rv-dock
+    kconfigflavour: generic
     kconfigs:
       - CONFIG_SYSTEM_REVOCATION_KEYS=""
       - CONFIG_SYSTEM_TRUSTED_KEYS=""
+      - CONFIG_DEBUG_INFO_BTF=n
       - CONFIG_DEBUG_INFO=n
+      - CONFIG_NLS_ISO8859_1=y
+    override-pull: |
+      snapcraftctl pull
+      patch -p1 < ${SNAPCRAFT_PROJECT_DIR}/0001-memory.patch
     override-build: |
       cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
       snapcraftctl build
-      # Extract version from Debian changelog
-      snapcraftctl set-version $(head -n1 ${SNAPCRAFT_PART_SRC}/debian.riscv/changelog | cut -f2 -d\( | cut -f1 -d\))
+      VER="$(strings vmlinux|grep "Linux version 5"|cut -d' ' -f3)"
+      snapcraftctl set-version "$VER"
     build-packages:
       - dpkg-dev
       - flex
@@ -51,16 +55,29 @@ parts:
       - libssl-dev
       - libfdt-dev
       - cpio
+      - binutils-${SNAPCRAFT_ARCH_TRIPLET}
       - device-tree-compiler
       - libelf-dev
       - u-boot-tools
-      - dwarves
       - on riscv64:
-          - gcc
-          - binutils
+        - gcc
       - else:
-          - gcc-${SNAPCRAFT_ARCH_TRIPLET}
-          - binutils-${SNAPCRAFT_ARCH_TRIPLET}
+        - gcc-${SNAPCRAFT_ARCH_TRIPLET}
+    stage:
+      - -kernel.img
+    prime:
+      - -initrd.img
+      - -dtbs/
+  fit-image:
+    after:
+      - kernel
+    plugin: nil
+    build-packages:
+      - u-boot-tools
+    override-build: |
+      mkimage \
+          -f ${SNAPCRAFT_PROJECT_DIR}/fitimage.its \
+          -r ${SNAPCRAFT_PART_INSTALL}/kernel.img
 
   firmware:
     plugin: nil
