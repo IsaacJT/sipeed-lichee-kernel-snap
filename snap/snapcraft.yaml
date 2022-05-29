@@ -60,6 +60,7 @@ parts:
     override-pull: |
       snapcraftctl pull
       patch -p1 < ${SNAPCRAFT_PROJECT_DIR}/patches/0001-remove-obsolute-references-to-PHYS_OFFSET.patch
+      patch -p1 < ${SNAPCRAFT_PROJECT_DIR}/patches/0002-phy-sun4i-usb-add-D1-variant.patch
     override-build: |
       cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
       snapcraftctl build
