@@ -33,6 +33,8 @@ parts:
     kernel-device-trees:
       - allwinner/sun20i-d1-lichee-rv-dock
     kconfigflavour: generic
+    build-environment:
+      - PATH: "/usr/lib/ccache:${PATH}"
     kconfigs:
       - CONFIG_SYSTEM_REVOCATION_KEYS=""
       - CONFIG_SYSTEM_TRUSTED_KEYS=""
