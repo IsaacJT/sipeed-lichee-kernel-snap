@@ -81,22 +81,6 @@ parts:
         - gcc
       - else:
         - gcc-${SNAPCRAFT_ARCH_TRIPLET}
-    # stage:
-    #   - -kernel.img
-    # prime:
-    #   - -initrd.img
-    #   - -dtbs/
-
-  # fit-image:
-  #   after:
-  #     - kernel
-  #   plugin: nil
-  #   build-packages:
-  #     - u-boot-tools
-  #   override-build: |
-  #     mkimage \
-  #         -f ${SNAPCRAFT_PROJECT_DIR}/fitimage.its \
-  #         -r ${SNAPCRAFT_PART_INSTALL}/kernel.img
 
   firmware:
     plugin: nil
@@ -107,3 +91,21 @@ parts:
       - -usr
     organize:
       lib/firmware: firmware
+
+  wlan-driver:
+    after: [kernel]
+    plugin: make
+    source: git@github.com:lwfinger/rtl8723ds.git
+    build-environment:
+      - PATH: "/usr/lib/ccache:${PATH}"
+    make-parameters:
+      - CROSS_COMPILE="${SNAPCRAFT_ARCH_TRIPLET}-"
+      - KSRC="${SNAPCRAFT_PROJECT_DIR}/parts/kernel/build"
+
+  wlan-firmware:
+    plugin: dump
+    source: git@github.com:armbian/firmware.git
+    organize:
+      "*": firmware/
+    stage:
+      - rtl_bt/rtl8723ds_*.bin
