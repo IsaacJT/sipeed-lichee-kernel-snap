@@ -12,8 +12,8 @@
 			arch = "riscv";
 			os = "linux";
 			compression = "none";
-			load =  <0x4c000000>;
-			entry = <0x4c000000>;
+			load =  <0x4b000000>;
+			entry = <0x4b000000>;
 			hash-1 {
 				algo = "sha256";
 			};
@@ -26,8 +26,8 @@
 			arch = "riscv";
 			os = "linux";
 			compression = "none";
-			load =  <0x45000000>;
-			entry = <0x45000000>;
+			load =  <0x50000000>;
+			entry = <0x50000000>;
 			hash-1 {
 				algo = "sha256";
 			};

@@ -39,9 +39,11 @@ parts:
       - CONFIG_DEBUG_INFO_BTF=n
       - CONFIG_DEBUG_INFO=n
       - CONFIG_NLS_ISO8859_1=y
-    override-pull: |
-      snapcraftctl pull
-      patch -p1 < ${SNAPCRAFT_PROJECT_DIR}/0001-memory.patch
+      # Uneeded modules
+      - CONFIG_DRM_RADEON=n
+      - CONFIG_DRM_NOUVEAU=n
+      - CONFIG_DRM_VIRTIO_GPU=n
+      - CONFIG_DRM_AMDGPU=n
     override-build: |
       cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
       snapcraftctl build
@@ -63,21 +65,22 @@ parts:
         - gcc
       - else:
         - gcc-${SNAPCRAFT_ARCH_TRIPLET}
-    stage:
-      - -kernel.img
-    prime:
-      - -initrd.img
-      - -dtbs/
-  fit-image:
-    after:
-      - kernel
-    plugin: nil
-    build-packages:
-      - u-boot-tools
-    override-build: |
-      mkimage \
-          -f ${SNAPCRAFT_PROJECT_DIR}/fitimage.its \
-          -r ${SNAPCRAFT_PART_INSTALL}/kernel.img
+    # stage:
+    #   - -kernel.img
+    # prime:
+    #   - -initrd.img
+    #   - -dtbs/
+
+  # fit-image:
+  #   after:
+  #     - kernel
+  #   plugin: nil
+  #   build-packages:
+  #     - u-boot-tools
+  #   override-build: |
+  #     mkimage \
+  #         -f ${SNAPCRAFT_PROJECT_DIR}/fitimage.its \
+  #         -r ${SNAPCRAFT_PART_INSTALL}/kernel.img
 
   firmware:
     plugin: nil
