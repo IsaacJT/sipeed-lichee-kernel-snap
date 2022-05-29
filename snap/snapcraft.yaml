@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (C) 2022 Isaac True
 
-name: sipeed-lichee-kernel
-summary: A Sipeed Lichee BSP board kernel for use with Ubuntu Core 20
+name: sipeed-lichee-rv-kernel
+summary: A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 20
 description: |
-  A Sipeed Lichee BSP board kernel for use with Ubuntu Core 20
+  A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 20
 
 adopt-info: kernel
 build-base: core20
