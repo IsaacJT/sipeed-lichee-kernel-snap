@@ -22,8 +22,8 @@ architectures:
 parts:
   kernel:
     plugin: x-kernel
-    source: https://github.com/AlexGhiti/riscv-linux.git
-    source-branch: int/alex/nezha_wifi_Ubuntu-unstable-5.17.0-8.8
+    source: git@github.com:smaeul/linux.git
+    source-branch: riscv/d1-wip
     source-depth: 1
     kernel-compiler: ${SNAPCRAFT_ARCH_TRIPLET}-gcc
     kernel-with-firmware: false
@@ -32,7 +32,8 @@ parts:
     kernel-initrd-compression: gz
     kernel-device-trees:
       - allwinner/sun20i-d1-lichee-rv-dock
-    kconfigflavour: generic
+    kdefconfig:
+      - nezha_defconfig
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
     kconfigs:
@@ -57,10 +58,6 @@ parts:
       - CONFIG_DRM_ARCPGU=n
       - CONFIG_DRM_GM12U320=n
       - CONFIG_DRM_CIRRUS_QEMU=n
-    override-pull: |
-      snapcraftctl pull
-      patch -p1 < ${SNAPCRAFT_PROJECT_DIR}/patches/0001-remove-obsolute-references-to-PHYS_OFFSET.patch
-      patch -p1 < ${SNAPCRAFT_PROJECT_DIR}/patches/0002-phy-sun4i-usb-add-D1-variant.patch
     override-build: |
       cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
       snapcraftctl build
