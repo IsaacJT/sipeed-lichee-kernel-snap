@@ -1,5 +1,3 @@
-# building
+# sipeed-lichee-rv-kernel-snap
 
-    $ git clone --recursive https://github.com/ogra1/visionfive-kernel-snap.git
-    $ cd visionfive-kernel-snap
-    $ snapcraft --destructive-mode --target-arch=riscv64 --enable-experimental-target-arch
+Kernel snap for running Ubuntu Core 20 on a Sipeed Lichee RV.
