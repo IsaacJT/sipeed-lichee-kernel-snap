@@ -22,7 +22,7 @@ architectures:
 parts:
   kernel:
     plugin: x-kernel
-    source: git@github.com:smaeul/linux.git
+    source: https://github.com/smaeul/linux.git
     source-branch: riscv/d1-wip
     source-depth: 1
     kernel-compiler: ${SNAPCRAFT_ARCH_TRIPLET}-gcc
@@ -39,8 +39,6 @@ parts:
     kconfigs:
       - CONFIG_SYSTEM_REVOCATION_KEYS=""
       - CONFIG_SYSTEM_TRUSTED_KEYS=""
-      - CONFIG_DEBUG_INFO_BTF=n
-      - CONFIG_DEBUG_INFO=n
       - CONFIG_NLS_ISO8859_1=y
       - CONFIG_DRM_SUN4I=y
       - CONFIG_DRM_SUN8I_DW_HDMI=y
@@ -95,7 +93,7 @@ parts:
   wlan-driver:
     after: [kernel]
     plugin: nil
-    source: git@github.com:lwfinger/rtl8723ds.git
+    source: https://github.com/lwfinger/rtl8723ds.git
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
     override-build: |
