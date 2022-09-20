@@ -1,5 +1,5 @@
-parts/
-prime/
-stage/
-*.snap
+/parts/
+/prime/
+/stage/
+/*.snap
 *.swp
