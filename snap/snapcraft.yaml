@@ -52,6 +52,27 @@ parts:
       - kernel-modules
       - kconfig
       - dtbs
+      # Remove large modules that will never be used
+      - -kernel-modules/*/kernel/drivers/net/ethernet
+      - -kernel-modules/*/kernel/drivers/gpu/drm/amd
+      - -kernel-modules/*/kernel/drivers/gpu/drm/nouveau
+      - -kernel-modules/*/kernel/drivers/gpu/drm/radeon
+      - -kernel-modules/*/kernel/drivers/scsi
+      - -kernel-modules/*/kernel/drivers/media
+      - -kernel-modules/*/kernel/drivers/net/can
+      - -kernel-modules/*/kernel/drivers/net/dsa
+      - -kernel-modules/*/kernel/drivers/net/wireless/ath
+      - -kernel-modules/*/kernel/drivers/net/wireless/intel
+      - -kernel-modules/*/kernel/drivers/net/wireless/mediatek
+      - -kernel-modules/*/kernel/drivers/net/wireless/broadcom
+      - -kernel-modules/*/kernel/drivers/net/wireless/marvell
+      - -kernel-modules/*/kernel/drivers/net/wireless/ralink
+      - -kernel-modules/*/kernel/drivers/net/wireless/intersil
+      - -kernel-modules/*/kernel/drivers/net/wireless/ti
+      - -kernel-modules/*/kernel/drivers/infiniband
+      - -kernel-modules/*/kernel/drivers/sound/pci
+      - -kernel-modules/*/kernel/drivers/comedi
+
     prime:
       - -*
 
@@ -89,7 +110,40 @@ parts:
     organize:
       lib/firmware: firmware
     stage:
-      - firmware
+      - -usr
+      - -lib
+      - -firmware/amd
+      - -firmware/amdgpu
+      - -firmware/asihpi
+      - -firmware/cavium
+      - -firmware/cxgb3
+      - -firmware/cxgb4
+      - -firmware/dpaa2
+      - -firmware/i915
+      - -firmware/intel
+      - -firmware/iwlwifi-*
+      - -firmware/liquidio
+      - -firmware/matrox
+      - -firmware/mediatek
+      - -firmware/mellanox
+      - -firmware/mrvl
+      - -firmware/moxa
+      - -firmware/netronome
+      - -firmware/nvidia
+      - -firmware/qed
+      - -firmware/radeon
+      - -firmware/rockchip
+      - -firmware/ath10k/QCA9377/hw1.0/firmware-5.bin
+      - -firmware/ath3k-1.fw
+      - -firmware/qca/htbtfw20.tlv
+      - -firmware/qcom
+      - -firmware/s5p*
+      - -firmware/ath11k
+      - -firmware/ath10k
+      - -firmware/brcm
+      - -firmware/vsc
+      - -firmware/cypress
+
 
   kernel-sources:
     after:
