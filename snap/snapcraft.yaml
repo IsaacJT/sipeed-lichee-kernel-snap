@@ -3,131 +3,190 @@
 # Copyright (C) 2022 Isaac True
 
 name: sipeed-lichee-rv-kernel
-summary: A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 20
+summary: A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 22
 description: |
-  A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 20
+  A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 22
 
 adopt-info: kernel
-build-base: core20
+build-base: core22
 grade: stable
 confinement: strict
 type: kernel
+compression: lzo
 
 architectures:
   - build-on:
       - amd64
+      - arm64
       - riscv64
-    run-on: riscv64
+    build-for: riscv64
+
+package-repositories:
+  - type: apt
+    url: https://ppa.launchpadcontent.net/canonical-kernel-team/ppa/ubuntu
+    components: [main]
+    architectures: [riscv64]
+    key-id: 110E21D8B0E2A1F0243AF6820856F197B892ACEA
+    key-server: keyserver.ubuntu.com
+    suites: [jammy]
+    formats:
+      - deb
+      - deb-src
 
 parts:
   kernel:
-    plugin: x-kernel
-    source: https://github.com/smaeul/linux.git
-    source-branch: riscv/d1-wip
-    source-depth: 1
-    kernel-compiler: ${SNAPCRAFT_ARCH_TRIPLET}-gcc
-    kernel-with-firmware: false
-    kernel-image-target: Image
-    kernel-initrd-channel: stable
-    kernel-initrd-compression: gz
-    kernel-device-trees:
-      - allwinner/sun20i-d1-lichee-rv-dock
-    kdefconfig:
-      - nezha_defconfig
-    build-environment:
-      - PATH: "/usr/lib/ccache:${PATH}"
-    kconfigs:
-      - CONFIG_SYSTEM_REVOCATION_KEYS=""
-      - CONFIG_SYSTEM_TRUSTED_KEYS=""
-      - CONFIG_NLS_ISO8859_1=y
-      - CONFIG_DRM_SUN4I=y
-      - CONFIG_DRM_SUN8I_DW_HDMI=y
-      - CONFIG_DRM_SUN8I_MIXER=y
-      # Disable unneeded modules
-      - CONFIG_DRM_RADEON=n
-      - CONFIG_DRM_NOUVEAU=n
-      - CONFIG_DRM_VIRTIO_GPU=n
-      - CONFIG_DRM_AMDGPU=n
-      - CONFIG_DRM_MXSFB=n
-      - CONFIG_DRM_QXL=n
-      - CONFIG_DRM_MGAG200=n
-      - CONFIG_DRM_VKMS=n
-      - CONFIG_DRM_BOCHS=n
-      - CONFIG_DRM_ARCPGU=n
-      - CONFIG_DRM_GM12U320=n
-      - CONFIG_DRM_CIRRUS_QEMU=n
-    override-build: |
-      cp ${SNAPCRAFT_PROJECT_DIR}/sources/uc-initrd_20-stable_riscv64.snap ${SNAPCRAFT_PART_BUILD}/uc-initrd_20-stable_riscv64.snap
-      snapcraftctl build
-      VER="$(strings vmlinux|grep "Linux version 5"|cut -d' ' -f3)"
-      snapcraftctl set-version "$VER"
-    build-packages:
-      - dpkg-dev
-      - flex
-      - bison
-      - binutils
-      - libssl-dev
-      - libfdt-dev
-      - cpio
-      - binutils-${SNAPCRAFT_ARCH_TRIPLET}
-      - device-tree-compiler
-      - libelf-dev
-      - u-boot-tools
-      - on riscv64:
-        - gcc
-      - else:
-        - gcc-${SNAPCRAFT_ARCH_TRIPLET}
+    plugin: nil
+    stage-packages:
+      - linux-allwinner:${CRAFT_TARGET_ARCH}
+    override-stage: |
+      craftctl default
+      craftctl set version="$(ls ${CRAFT_PART_INSTALL}/kernel-modules/ | cut -f1 -d/)"
+      craftctl set grade="devel"
+    organize:
+      boot/vmlinuz-*: vmlinuz
+      boot/config-*: kconfig
+      lib/modules: kernel-modules
+      lib/firmware/*/device-tree: dtbs
     stage:
-      - -modules
+      - vmlinuz
+      - kernel-modules
+      - kconfig
+      - dtbs
+    prime:
+      - -*
+
+  initrd:
+    after:
+      - kernel
+    plugin: nil
+    source: initrd
+    build-packages:
+      - lz4
+      - kmod
+    override-build: |
+      KVER=$(craftctl get version)
+
+      # Just use a core20 initrd for now
+      lz4cat ${CRAFT_PART_BUILD}/uc-initrd_20-stable_${CRAFT_TARGET_ARCH}.img | cpio -idm
+      rm ${CRAFT_PART_BUILD}/uc-initrd_20-stable_${CRAFT_TARGET_ARCH}.img
+
+      # Add module(s) necessary for booting
+      install -Dm0644 ${CRAFT_STAGE}/kernel-modules/${KVER}/kernel/fs/nls/nls_iso8859-1.ko \
+        ${CRAFT_PART_BUILD}/lib/modules/${KVER}/kernel/fs/nls/nls_iso8859-1.ko
+
+      depmod -b ${CRAFT_PART_BUILD} ${KVER}
+
+      find . | cpio -o -H newc -R 0:0 | lz4 -9 -l > ${CRAFT_PART_INSTALL}/initrd.img
+    stage:
+      - initrd.img
+    prime:
+      - -*
 
   firmware:
     plugin: nil
     stage-packages:
       - linux-firmware
-      - wireless-regdb
-    stage:
-      - -usr
     organize:
       lib/firmware: firmware
+    stage:
+      - firmware
+
+  kernel-sources:
+    after:
+      - kernel
+    plugin: nil
+    build-environment:
+      - PATH: "/usr/lib/ccache:${PATH}"
+    override-build: |
+      KVER=$(craftctl get version)
+      apt-get source linux-headers-${KVER}:${CRAFT_TARGET_ARCH}
+      # Fix missing x permission
+      chmod a+x ${CRAFT_PART_BUILD}/linux-allwinner-*/scripts/pahole-version.sh
+      rm -f ${CRAFT_PART_BUILD}/linux-allwinner-*.{dsc,tar.*,diff.*}
+      cp -r ${CRAFT_PART_BUILD}/linux-allwinner-* ${CRAFT_PART_INSTALL}/kernel-sources
+
+      make -C ${CRAFT_PART_INSTALL}/kernel-sources ARCH=riscv \
+        CROSS_COMPILE=${CRAFT_ARCH_TRIPLET}- mrproper
+      cp ${CRAFT_STAGE}/kconfig ${CRAFT_PART_INSTALL}/kernel-sources/.config
+      make -C ${CRAFT_PART_INSTALL}/kernel-sources ARCH=riscv \
+        CROSS_COMPILE=${CRAFT_ARCH_TRIPLET}- -j$(nproc) modules_prepare
+    prime:
+      - -*
 
   wlan-driver:
-    after: [kernel]
+    after:
+      - kernel-sources
     plugin: nil
     source: https://github.com/lwfinger/rtl8723ds.git
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
+    build-packages:
+      - gcc-${CRAFT_ARCH_TRIPLET}
     override-build: |
-      KVER=$(ls ${SNAPCRAFT_PROJECT_DIR}/parts/kernel/install/modules/ | cut -f1 -d/)
-      make CROSS_COMPILE="${SNAPCRAFT_ARCH_TRIPLET}-" \
-        KSRC="${SNAPCRAFT_PROJECT_DIR}/parts/kernel/build" \
-        ARCH="riscv" KVER=${KVER}
-      cp ${SNAPCRAFT_PART_BUILD}/8723ds.ko ${SNAPCRAFT_PART_INSTALL}/
+      KVER=$(craftctl get version)
+
+      make CROSS_COMPILE="${CRAFT_ARCH_TRIPLET}-" -j$(nproc) \
+        KSRC="${CRAFT_STAGE}/kernel-sources" \
+        ARCH="riscv" KVER=${KVER} USER_MODULE_NAME="rtl8723ds"
+      cp ${SNAPCRAFT_PART_BUILD}/rtl8723ds.ko ${SNAPCRAFT_PART_INSTALL}/
     stage:
-      - -modules
+      - rtl8723ds.ko
+    prime:
+      - -*
 
   depmod:
     plugin: nil
     after:
       - kernel
       - wlan-driver
+    build-packages:
+      - kmod
     override-build: |
-      KVER=$(ls ${SNAPCRAFT_PROJECT_DIR}/parts/kernel/install/modules/ | cut -f1 -d/)
+      KVER=$(craftctl get version)
 
       # Collect all kernel and separately built modules
-      cp -r ${SNAPCRAFT_PROJECT_DIR}/parts/kernel/install/modules \
-        ${SNAPCRAFT_PART_INSTALL}/
-      cp -r ${SNAPCRAFT_PROJECT_DIR}/parts/wlan-driver/install/8723ds.ko \
-        ${SNAPCRAFT_PART_INSTALL}/modules/${KVER}/
+      cp -r ${CRAFT_STAGE}/kernel-modules \
+        ${CRAFT_PART_INSTALL}/modules
+      install -Dm0644 ${CRAFT_STAGE}/rtl8723ds.ko \
+        ${CRAFT_PART_INSTALL}/modules/${KVER}/kernel/drivers/net/wireless/realtek/rtl8723ds/rtl8723ds.ko
 
-      ln -rs ${SNAPCRAFT_PART_INSTALL} ${SNAPCRAFT_PART_INSTALL}/lib
-      depmod -b ${SNAPCRAFT_PART_INSTALL} ${KVER}
-    stage:
-      - modules
+      ln -rs ${CRAFT_PART_INSTALL} ${CRAFT_PART_INSTALL}/lib
+      depmod -b ${CRAFT_PART_INSTALL} ${KVER}
 
   wlan-firmware:
     plugin: dump
-    source: git@github.com:armbian/firmware.git
+    source: https://github.com/armbian/firmware.git
     organize:
-      "*": firmware/
+      rtl_bt/rtl8723ds_*.bin: firmware/rtl_bt/
     stage:
-      - firmware/rtl_bt/rtl8723ds_*.bin
+      - firmware/rtl_bt
+
+  overlays:
+    plugin: nil
+    source: overlays
+    build-packages:
+      - device-tree-compiler
+    override-build: |
+      for f in $(ls ${CRAFT_PART_SRC}/*.dts); do
+        dtc -@ -I dts -O dtb -o ${CRAFT_PART_INSTALL}/$(basename $f | cut -f1 -d.).dtbo $f
+      done
+    organize:
+      "*.dtbo": dtbs/overlays/
+    stage:
+      - dtbs/overlays
+    prime:
+      - -*
+
+  fit-image:
+    after:
+      - kernel
+      - initrd
+      - overlays
+    plugin: nil
+    source: fit-image
+    build-packages:
+      - u-boot-tools
+    override-build: |
+      mkimage \
+          -f kernel_${SNAPCRAFT_TARGET_ARCH}.its \
+          -r ${SNAPCRAFT_PART_INSTALL}/kernel.img
