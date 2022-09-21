@@ -47,13 +47,13 @@ parts:
       boot/config-*: kconfig
       lib/modules: kernel-modules
       lib/firmware/*/device-tree: dtbs
-      lib/firmware/regulatory.db: firmware/regulatory.db
+      lib/firmware/regulatory.db*: firmware/
     stage:
       - vmlinuz
       - kernel-modules
       - kconfig
       - dtbs
-      - firmware/regulatory.db
+      - firmware/regulatory.db*
       # Remove large modules that will never be used
       - -kernel-modules/*/kernel/drivers/net/ethernet
       - -kernel-modules/*/kernel/drivers/gpu/drm/amd
