@@ -60,7 +60,6 @@ parts:
       - -kernel-modules/*/kernel/drivers/gpu/drm/nouveau
       - -kernel-modules/*/kernel/drivers/gpu/drm/radeon
       - -kernel-modules/*/kernel/drivers/scsi
-      - -kernel-modules/*/kernel/drivers/media
       - -kernel-modules/*/kernel/drivers/net/can
       - -kernel-modules/*/kernel/drivers/net/dsa
       - -kernel-modules/*/kernel/drivers/net/wireless/ath
