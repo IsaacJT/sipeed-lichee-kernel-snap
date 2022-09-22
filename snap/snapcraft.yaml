@@ -176,14 +176,14 @@ parts:
     source: https://github.com/lwfinger/rtl8723ds.git
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
+      - ARCH: "riscv"
+      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
     build-packages:
       - gcc-${CRAFT_ARCH_TRIPLET}
     override-build: |
-      KVER=$(craftctl get version)
+      make -C "${CRAFT_STAGE}/kernel-sources" -j$(nproc) \
+        M="${CRAFT_PART_BUILD}" CONFIG_RTL8723DS=m modules
 
-      make CROSS_COMPILE="${CRAFT_ARCH_TRIPLET}-" -j$(nproc) \
-        KSRC="${CRAFT_STAGE}/kernel-sources" \
-        ARCH="riscv" KVER=${KVER}
       cp ${SNAPCRAFT_PART_BUILD}/8723ds.ko ${SNAPCRAFT_PART_INSTALL}/
     stage:
       - 8723ds.ko
