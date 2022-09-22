@@ -48,12 +48,14 @@ parts:
       lib/modules: kernel-modules
       lib/firmware/*/device-tree: dtbs
       lib/firmware/regulatory.db*: firmware/
+      usr/src/linux-headers-*/Module.symvers: Module.symvers
     stage:
       - vmlinuz
       - kernel-modules
       - kconfig
       - dtbs
       - firmware/regulatory.db*
+      - Module.symvers
       # Remove large modules that will never be used
       - -kernel-modules/*/kernel/drivers/net/ethernet
       - -kernel-modules/*/kernel/drivers/gpu/drm/amd
@@ -73,7 +75,6 @@ parts:
       - -kernel-modules/*/kernel/drivers/infiniband
       - -kernel-modules/*/kernel/drivers/sound/pci
       - -kernel-modules/*/kernel/drivers/comedi
-
     prime:
       - -*
 
@@ -153,6 +154,8 @@ parts:
     plugin: nil
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
+      - ARCH: "riscv"
+      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
     override-build: |
       KVER=$(craftctl get version)
       apt-get source linux-headers-${KVER}:${CRAFT_TARGET_ARCH}
@@ -161,11 +164,10 @@ parts:
       rm -f ${CRAFT_PART_BUILD}/linux-allwinner-*.{dsc,tar.*,diff.*}
       cp -r ${CRAFT_PART_BUILD}/linux-allwinner-* ${CRAFT_PART_INSTALL}/kernel-sources
 
-      make -C ${CRAFT_PART_INSTALL}/kernel-sources ARCH=riscv \
-        CROSS_COMPILE=${CRAFT_ARCH_TRIPLET}- mrproper
+      make -C ${CRAFT_PART_INSTALL}/kernel-sources mrproper
       cp ${CRAFT_STAGE}/kconfig ${CRAFT_PART_INSTALL}/kernel-sources/.config
-      make -C ${CRAFT_PART_INSTALL}/kernel-sources ARCH=riscv \
-        CROSS_COMPILE=${CRAFT_ARCH_TRIPLET}- -j$(nproc) modules_prepare
+      make -C ${CRAFT_PART_INSTALL}/kernel-sources -j$(nproc) modules_prepare
+      cp ${CRAFT_STAGE}/Module.symvers ${CRAFT_PART_INSTALL}/kernel-sources/
     prime:
       - -*
 
