@@ -166,7 +166,10 @@ parts:
 
       make -C ${CRAFT_PART_INSTALL}/kernel-sources mrproper
       cp ${CRAFT_STAGE}/kconfig ${CRAFT_PART_INSTALL}/kernel-sources/.config
-      make -C ${CRAFT_PART_INSTALL}/kernel-sources -j$(nproc) modules_prepare
+      make -C ${CRAFT_PART_INSTALL}/kernel-sources KERNELVERSION=${KVER} \
+        oldconfig
+      make -C ${CRAFT_PART_INSTALL}/kernel-sources KERNELVERSION=${KVER} \
+        -j$(nproc) modules_prepare
       cp ${CRAFT_STAGE}/Module.symvers ${CRAFT_PART_INSTALL}/kernel-sources/
     prime:
       - -*
