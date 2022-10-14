@@ -19,7 +19,8 @@ architectures:
       - amd64
       - arm64
       - riscv64
-    build-for: riscv64
+    build-for:
+      - riscv64
 
 package-repositories:
   - type: apt
@@ -87,7 +88,7 @@ parts:
       - lz4
       - kmod
     override-build: |
-      KVER=$(craftctl get version)
+      KVER="$(ls ${CRAFT_STAGE}/kernel-modules/ | cut -f1 -d/)"
 
       # Just use a core20 initrd for now
       lz4cat ${CRAFT_PART_BUILD}/uc-initrd_20-stable_${CRAFT_TARGET_ARCH}.img | cpio -idm
@@ -96,6 +97,8 @@ parts:
       # Add module(s) necessary for booting
       install -Dm0644 ${CRAFT_STAGE}/kernel-modules/${KVER}/kernel/fs/nls/nls_iso8859-1.ko \
         ${CRAFT_PART_BUILD}/lib/modules/${KVER}/kernel/fs/nls/nls_iso8859-1.ko
+      install -Dm0644 ${CRAFT_STAGE}/kernel-modules/${KVER}/kernel/drivers/block/virtio_blk.ko  \
+        ${CRAFT_PART_BUILD}/lib/modules/${KVER}/kernel/drivers/block/virtio_blk.ko
 
       depmod -b ${CRAFT_PART_BUILD} ${KVER}
 
@@ -147,7 +150,6 @@ parts:
       - -firmware/vsc
       - -firmware/cypress
 
-
   kernel-sources:
     after:
       - kernel
@@ -162,7 +164,7 @@ parts:
       - libssl-dev
       - libelf-dev
     override-build: |
-      KVER=$(craftctl get version)
+      KVER="$(ls ${CRAFT_STAGE}/kernel-modules/ | cut -f1 -d/)"
       apt-get source linux-headers-${KVER}:${CRAFT_TARGET_ARCH}
       # Fix missing x permission
       chmod a+x ${CRAFT_PART_BUILD}/linux-allwinner-*/scripts/pahole-version.sh
@@ -179,24 +181,50 @@ parts:
     prime:
       - -*
 
+  wlan-driver-dkms:
+    plugin: nil
+    stage-packages:
+      - rtl8723ds-dkms
+    override-build: |
+      craftctl default
+      # Disable strip to fix compilation with dkms
+      echo 'STRIP[0]="no"' | tee -a ${CRAFT_PART_INSTALL}/usr/src/rtl8723ds-dkms-*/dkms.conf
+    stage:
+      - usr/src/rtl8723ds-dkms-*
+    prime:
+      - -*
+
   wlan-driver:
     after:
       - kernel-sources
+      - wlan-driver-dkms
     plugin: nil
-    source: https://github.com/lwfinger/rtl8723ds.git
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
+      - on riscv64:
+        - CROSS_COMPILE: ""
+      - else:
+        - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
       - ARCH: "riscv"
-      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
     build-packages:
-      - gcc-${CRAFT_ARCH_TRIPLET}
+      - dkms
+      - on riscv64:
+        - gcc
+      - else:
+        - gcc-${CRAFT_ARCH_TRIPLET}
     override-build: |
-      make -C "${CRAFT_STAGE}/kernel-sources" -j$(nproc) \
-        M="${CRAFT_PART_BUILD}" CONFIG_RTL8723DS=m modules
+      MOD_VER="$(basename ${CRAFT_STAGE}/usr/src/rtl8723ds-dkms-* | cut -f 3 -d-)"
+      KVER="$(ls ${CRAFT_STAGE}/kernel-modules/ | cut -f1 -d/)"
+      mkdir -p "${CRAFT_PART_INSTALL}/kernel-modules/${KVER}"
 
-      cp ${SNAPCRAFT_PART_BUILD}/8723ds.ko ${SNAPCRAFT_PART_INSTALL}/
-    stage:
-      - 8723ds.ko
+      dkms install -m rtl8723ds-dkms -v ${MOD_VER} \
+        -k ${KVER} -a riscv -j $(nproc) \
+        --no-prepare-kernel --no-clean-kernel --no-depmod \
+        --kernelsourcedir ${CRAFT_STAGE}/kernel-sources \
+        --sourcetree ${CRAFT_STAGE}/usr/src \
+        --config ${CRAFT_STAGE}/kconfig \
+        --dkmstree ${CRAFT_PART_BUILD} \
+        --installtree ${CRAFT_PART_INSTALL}/kernel-modules
     prime:
       - -*
 
@@ -208,13 +236,11 @@ parts:
     build-packages:
       - kmod
     override-build: |
-      KVER=$(craftctl get version)
+      KVER="$(ls ${CRAFT_STAGE}/kernel-modules/ | cut -f1 -d/)"
 
       # Collect all kernel and separately built modules
       cp -r ${CRAFT_STAGE}/kernel-modules \
         ${CRAFT_PART_INSTALL}/modules
-      install -Dm0644 ${CRAFT_STAGE}/8723ds.ko \
-        ${CRAFT_PART_INSTALL}/modules/${KVER}/kernel/drivers/net/wireless/realtek/rtl8723ds/8723ds.ko
 
       ln -rs ${CRAFT_PART_INSTALL} ${CRAFT_PART_INSTALL}/lib
       depmod -b ${CRAFT_PART_INSTALL} ${KVER}
@@ -254,5 +280,5 @@ parts:
       - u-boot-tools
     override-build: |
       mkimage \
-          -f kernel_${SNAPCRAFT_TARGET_ARCH}.its \
-          -r ${SNAPCRAFT_PART_INSTALL}/kernel.img
+          -f kernel_${CRAFT_TARGET_ARCH}.its \
+          -r ${CRAFT_PART_INSTALL}/kernel.img
