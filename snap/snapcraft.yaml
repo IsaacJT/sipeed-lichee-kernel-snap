@@ -12,7 +12,7 @@ build-base: core22
 grade: stable
 confinement: strict
 type: kernel
-compression: lzo
+compression: xz
 
 architectures:
   - build-on:
@@ -22,70 +22,72 @@ architectures:
     build-for:
       - riscv64
 
-package-repositories:
-  # - type: apt
-  #   url: https://ppa.launchpadcontent.net/canonical-kernel-team/ppa/ubuntu
-  #   components: [main]
-  #   architectures: [riscv64]
-  #   key-id: 110E21D8B0E2A1F0243AF6820856F197B892ACEA
-  #   key-server: keyserver.ubuntu.com
-  #   suites: [jammy]
-  #   formats:
-  #     - deb
-  #     - deb-src
-  - type: apt
-    url: http://ports.ubuntu.com
-    components: [main]
-    architectures: [riscv64]
-    key-id: F6ECB3762474EDA9D21B7022871920D1991BC93C
-    key-server: keyserver.ubuntu.com
-    suites: [kinetic-proposed]
-    formats:
-      - deb
-      - deb-src
-
 parts:
   kernel:
     plugin: nil
-    stage-packages:
-      - linux-allwinner:${CRAFT_TARGET_ARCH}
-    override-stage: |
-      craftctl default
-      craftctl set version="$(ls ${CRAFT_PART_INSTALL}/kernel-modules/ | cut -f1 -d/)"
+    build-environment:
+      - PATH: "/usr/lib/ccache:${PATH}"
+      - ARCH: "riscv"
+      - on riscv64:
+        - CROSS_COMPILE: ""
+      - else:
+        - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
+    build-packages:
+      - flex
+      - bison
+      - libssl-dev
+      - libelf-dev
+      - pahole
+      - build-essential
+      - ccache
+      - on riscv64:
+        - gcc
+      - else:
+        - gcc-${CRAFT_ARCH_TRIPLET}
+    override-pull: |
+      # Determine the latest version and download sources
+      apt source $(apt info linux-headers-allwinner | grep -E '^Depends:' | cut -f2 -d\ | cut -f1 -d,)
+      rm -f ${CRAFT_PART_SRC}/*.{orig.tar.gz,diff.gz,dsc}
+      mv ${CRAFT_PART_SRC}/linux-allwinner-*/* ${CRAFT_PART_SRC}/
+    override-build: |
+      # Fix missing permission
+      chmod a+x scripts/pahole-version.sh
+
+      craftctl set version="$(head -n1 ${CRAFT_PART_BUILD}/debian.allwinner/changelog | cut -f 2 -d \( | cut -f 1 -d \))"
       craftctl set grade="devel"
-    organize:
-      boot/vmlinuz-*: vmlinuz
-      boot/config-*: kconfig
-      lib/modules: kernel-modules
-      lib/firmware/*/device-tree: dtbs
-      lib/firmware/regulatory.db*: firmware/
-      usr/src/linux-headers-*/Module.symvers: Module.symvers
-    stage:
-      - vmlinuz
-      - kernel-modules
-      - kconfig
-      - dtbs
-      - firmware/regulatory.db*
-      - Module.symvers
-      # Remove large modules that will never be used
-      - -kernel-modules/*/kernel/drivers/net/ethernet
-      - -kernel-modules/*/kernel/drivers/gpu/drm/amd
-      - -kernel-modules/*/kernel/drivers/gpu/drm/nouveau
-      - -kernel-modules/*/kernel/drivers/gpu/drm/radeon
-      - -kernel-modules/*/kernel/drivers/scsi
-      - -kernel-modules/*/kernel/drivers/net/can
-      - -kernel-modules/*/kernel/drivers/net/dsa
-      - -kernel-modules/*/kernel/drivers/net/wireless/ath
-      - -kernel-modules/*/kernel/drivers/net/wireless/intel
-      - -kernel-modules/*/kernel/drivers/net/wireless/mediatek
-      - -kernel-modules/*/kernel/drivers/net/wireless/broadcom
-      - -kernel-modules/*/kernel/drivers/net/wireless/marvell
-      - -kernel-modules/*/kernel/drivers/net/wireless/ralink
-      - -kernel-modules/*/kernel/drivers/net/wireless/intersil
-      - -kernel-modules/*/kernel/drivers/net/wireless/ti
-      - -kernel-modules/*/kernel/drivers/infiniband
-      - -kernel-modules/*/kernel/drivers/sound/pci
-      - -kernel-modules/*/kernel/drivers/comedi
+
+      cat debian.allwinner/config/{config.common.ubuntu,${CRAFT_TARGET_ARCH}/config.{common.${CRAFT_TARGET_ARCH},flavour.allwinner}} \
+        > ${CRAFT_PART_BUILD}/.config
+
+      make oldconfig
+
+      # Disable unneeded large modules
+      scripts/config --disable CONFIG_DRM_NOUVEAU
+      scripts/config --disable CONFIG_DRM_RADEON
+      scripts/config --disable CONFIG_DRM_AMDGPU
+      scripts/config --disable CONFIG_NET_VENDOR_MELLANOX
+
+      # Disable preconfigured signing certificates
+      scripts/config --disable CONFIG_MODULE_SIG_ALL
+      scripts/config --set-str CONFIG_SYSTEM_REVOCATION_KEYS ""
+      scripts/config --set-str CONFIG_SYSTEM_TRUSTED_KEYS ""
+
+      scripts/config --set-str CONFIG_LOCALVERSION "-allwinner"
+
+      make oldconfig
+
+      make -j $(nproc) Image modules dtbs
+      make -j $(nproc) INSTALL_MOD_PATH="${CRAFT_PART_INSTALL}/kernel-modules" \
+        modules_install
+
+      mv ${CRAFT_PART_INSTALL}/kernel-modules/lib/modules/* \
+        ${CRAFT_PART_INSTALL}/kernel-modules/
+
+      mkdir -p ${CRAFT_PART_INSTALL}/kernel-sources
+      cp -ra ${CRAFT_PART_BUILD}/* ${CRAFT_PART_INSTALL}/kernel-sources/
+
+      find ${CRAFT_PART_BUILD}/arch/${ARCH}/boot/dts/ -name \*.dtb \
+        -exec install -Dm0644 -t ${CRAFT_PART_INSTALL}/dtbs/ {} \;
     prime:
       - -*
 
@@ -96,6 +98,7 @@ parts:
     source: initrd
     build-packages:
       - lz4
+      - zstd
       - kmod
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
@@ -106,14 +109,14 @@ parts:
 
       # Add module(s) necessary for booting
       install -Dm0644 ${CRAFT_STAGE}/kernel-modules/${KVER}/kernel/fs/nls/nls_iso8859-1.ko \
-        ${CRAFT_PART_BUILD}/lib/modules/${KVER}/kernel/fs/nls/nls_iso8859-1.ko
+        -t ${CRAFT_PART_BUILD}/lib/modules/${KVER}/kernel/fs/nls
 
       depmod -b ${CRAFT_PART_BUILD} ${KVER}
 
       # Update module autoload configuration
       echo "nls_iso8859-1" > ${CRAFT_PART_BUILD}/usr/lib/modules-load.d/ubuntu-core-initramfs.conf
 
-      find . | cpio -o -H newc -R 0:0 | lz4 -9 -l > ${CRAFT_PART_INSTALL}/initrd.img
+      find . | cpio -o -H newc -R 0:0 | zstd -T0 > ${CRAFT_PART_INSTALL}/initrd.img
     stage:
       - initrd.img
     prime:
@@ -123,6 +126,7 @@ parts:
     plugin: nil
     stage-packages:
       - linux-firmware
+      - wireless-regdb
     organize:
       lib/firmware: firmware
     stage:
@@ -161,38 +165,9 @@ parts:
       - -firmware/vsc
       - -firmware/cypress
 
-  kernel-sources:
-    after:
-      - kernel
-    plugin: nil
-    build-environment:
-      - PATH: "/usr/lib/ccache:${PATH}"
-      - ARCH: "riscv"
-      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
-    build-packages:
-      - flex
-      - bison
-      - libssl-dev
-      - libelf-dev
-    override-build: |
-      KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
-      apt-get source linux-headers-${KVER}:${CRAFT_TARGET_ARCH}
-
-      rm -f ${CRAFT_PART_BUILD}/linux-allwinner-*.{dsc,tar.*,diff.*}
-      cp -r ${CRAFT_PART_BUILD}/linux-allwinner-* ${CRAFT_PART_INSTALL}/kernel-sources
-
-      cp ${CRAFT_STAGE}/kconfig ${CRAFT_PART_INSTALL}/kernel-sources/.config
-      make -C ${CRAFT_PART_INSTALL}/kernel-sources KERNELVERSION=${KVER} \
-        oldconfig
-      make -C ${CRAFT_PART_INSTALL}/kernel-sources KERNELVERSION=${KVER} \
-        -j$(nproc) modules_prepare
-      cp ${CRAFT_STAGE}/Module.symvers ${CRAFT_PART_INSTALL}/kernel-sources/
-    prime:
-      - -*
-
   wlan-driver:
     after:
-      - kernel-sources
+      - kernel
     plugin: nil
     source: https://github.com/lwfinger/rtl8723ds.git
     source-type: git
@@ -212,9 +187,10 @@ parts:
         - gcc-${CRAFT_ARCH_TRIPLET}
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
-      make ARCH="riscv" KSRC="${CRAFT_STAGE}/kernel-sources" \
-        M="${CRAFT_PART_BUILD}" -j $(nproc) \
+
+      make ARCH="riscv" KSRC="${CRAFT_STAGE}/kernel-sources" -j $(nproc) \
         modules
+
       install -Dm0644 ${CRAFT_PART_BUILD}/8723ds.ko \
         -t ${CRAFT_PART_INSTALL}/kernel-modules/${KVER}/dkms/
     prime:
@@ -225,6 +201,11 @@ parts:
     after:
       - kernel
       - wlan-driver
+    build-environment:
+      - on riscv64:
+        - CROSS_COMPILE: ""
+      - else:
+        - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
     build-packages:
       - kmod
     override-build: |
@@ -233,6 +214,9 @@ parts:
       # Collect all kernel and separately built modules
       cp -ar ${CRAFT_STAGE}/kernel-modules   \
         ${CRAFT_PART_INSTALL}/modules
+
+      find ${CRAFT_PART_INSTALL} -name \*.ko \
+        -exec ${CROSS_COMPILE}strip {} --strip-unneeded \;
 
       ln -frs ${CRAFT_PART_INSTALL} ${CRAFT_PART_INSTALL}/lib
       depmod -b ${CRAFT_PART_INSTALL} ${KVER}
