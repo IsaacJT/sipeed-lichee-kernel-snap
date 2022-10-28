@@ -123,17 +123,11 @@ parts:
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
       - ARCH: "riscv"
-      - on riscv64:
-        - CROSS_COMPILE: ""
-      - else:
-        - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
+      - CC: "gcc-12"
     build-packages:
       - make
       - ccache
-      - on riscv64:
-        - gcc
-      - else:
-        - gcc-${CRAFT_ARCH_TRIPLET}
+      - gcc-12
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
