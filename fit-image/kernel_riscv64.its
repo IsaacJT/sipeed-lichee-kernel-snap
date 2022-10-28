@@ -7,7 +7,7 @@
 	images {
 		kernel-ubuntu {
 			description = "ubuntu-kernel";
-			data = /incbin/("../../../stage/kernel-sources/arch/riscv/boot/Image");
+			data = /incbin/("../../../stage/vmlinuz");
 			type = "kernel";
 			arch = "riscv";
 			os = "linux";
@@ -37,7 +37,7 @@
 
 		fdt-sun20i-d1-nezha {
 			description = "Nezha";
-			data = /incbin/("../../../stage/dtbs/sun20i-d1-nezha.dtb");
+			data = /incbin/("../../../stage/dtbs/allwinner/sun20i-d1-nezha.dtb");
 			type = "flat_dt";
 			arch = "riscv";
 			compression = "none";
@@ -51,7 +51,7 @@
 
 		fdt-sun20i-d1-lichee-rv {
 			description = "Sipeed Lichee RV";
-			data = /incbin/("../../../stage/dtbs/sun20i-d1-lichee-rv.dtb");
+			data = /incbin/("../../../stage/dtbs/allwinner/sun20i-d1-lichee-rv.dtb");
 			type = "flat_dt";
 			arch = "riscv";
 			compression = "none";
@@ -65,7 +65,7 @@
 
 		fdt-sun20i-d1-lichee-rv-dock {
 			description = "Sipeed Lichee RV + Dock";
-			data = /incbin/("../../../stage/dtbs/sun20i-d1-lichee-rv-dock.dtb");
+			data = /incbin/("../../../stage/dtbs/allwinner/sun20i-d1-lichee-rv-dock.dtb");
 			type = "flat_dt";
 			arch = "riscv";
 			compression = "none";

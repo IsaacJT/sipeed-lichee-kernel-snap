@@ -16,8 +16,6 @@ compression: xz
 
 architectures:
   - build-on:
-      - amd64
-      - arm64
       - riscv64
     build-for:
       - riscv64
@@ -25,69 +23,18 @@ architectures:
 parts:
   kernel:
     plugin: nil
-    build-environment:
-      - PATH: "/usr/lib/ccache:${PATH}"
-      - ARCH: "riscv"
-      - on riscv64:
-        - CROSS_COMPILE: ""
-      - else:
-        - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
-    build-packages:
-      - flex
-      - bison
-      - libssl-dev
-      - libelf-dev
-      - pahole
-      - build-essential
-      - ccache
-      - on riscv64:
-        - gcc
-      - else:
-        - gcc-${CRAFT_ARCH_TRIPLET}
-    override-pull: |
-      # Determine the latest version and download sources
-      apt source $(apt info linux-headers-allwinner | grep -E '^Depends:' | cut -f2 -d\ | cut -f1 -d,)
-      rm -f ${CRAFT_PART_SRC}/*.{orig.tar.gz,diff.gz,dsc}
-      mv ${CRAFT_PART_SRC}/linux-allwinner-*/* ${CRAFT_PART_SRC}/
-    override-build: |
-      # Fix missing permission
-      chmod a+x scripts/pahole-version.sh
-
-      craftctl set version="$(head -n1 ${CRAFT_PART_BUILD}/debian.allwinner/changelog | cut -f 2 -d \( | cut -f 1 -d \))"
-      craftctl set grade="devel"
-
-      cat debian.allwinner/config/{config.common.ubuntu,${CRAFT_TARGET_ARCH}/config.{common.${CRAFT_TARGET_ARCH},flavour.allwinner}} \
-        > ${CRAFT_PART_BUILD}/.config
-
-      make oldconfig
-
-      # Disable unneeded large modules
-      scripts/config --disable CONFIG_DRM_NOUVEAU
-      scripts/config --disable CONFIG_DRM_RADEON
-      scripts/config --disable CONFIG_DRM_AMDGPU
-      scripts/config --disable CONFIG_NET_VENDOR_MELLANOX
-
-      # Disable preconfigured signing certificates
-      scripts/config --disable CONFIG_MODULE_SIG_ALL
-      scripts/config --set-str CONFIG_SYSTEM_REVOCATION_KEYS ""
-      scripts/config --set-str CONFIG_SYSTEM_TRUSTED_KEYS ""
-
-      scripts/config --set-str CONFIG_LOCALVERSION "-allwinner"
-
-      make oldconfig
-
-      make -j $(nproc) Image modules dtbs
-      make -j $(nproc) INSTALL_MOD_PATH="${CRAFT_PART_INSTALL}/kernel-modules" \
-        modules_install
-
-      mv ${CRAFT_PART_INSTALL}/kernel-modules/lib/modules/* \
-        ${CRAFT_PART_INSTALL}/kernel-modules/
-
-      mkdir -p ${CRAFT_PART_INSTALL}/kernel-sources
-      cp -ra ${CRAFT_PART_BUILD}/* ${CRAFT_PART_INSTALL}/kernel-sources/
-
-      find ${CRAFT_PART_BUILD}/arch/${ARCH}/boot/dts/ -name \*.dtb \
-        -exec install -Dm0644 -t ${CRAFT_PART_INSTALL}/dtbs/ {} \;
+    stage-packages:
+      - linux-image-allwinner
+      - linux-headers-allwinner
+    organize:
+      boot/vmlinuz*: vmlinuz
+      lib/modules/*: kernel-modules/
+      lib/firmware/*/device-tree: dtbs
+    stage:
+      - dtbs
+      - kernel-modules
+      - vmlinuz
+      - usr/src
     prime:
       - -*
 
@@ -175,12 +122,14 @@ parts:
     source-branch: master
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
+      - ARCH: "riscv"
       - on riscv64:
         - CROSS_COMPILE: ""
       - else:
         - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
     build-packages:
       - make
+      - ccache
       - on riscv64:
         - gcc
       - else:
@@ -188,7 +137,7 @@ parts:
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
-      make ARCH="riscv" KSRC="${CRAFT_STAGE}/kernel-sources" -j $(nproc) \
+      make KSRC="${CRAFT_STAGE}/usr/src/linux-headers-${KVER}" -j $(nproc) \
         modules
 
       install -Dm0644 ${CRAFT_PART_BUILD}/8723ds.ko \
@@ -201,22 +150,14 @@ parts:
     after:
       - kernel
       - wlan-driver
-    build-environment:
-      - on riscv64:
-        - CROSS_COMPILE: ""
-      - else:
-        - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
     build-packages:
       - kmod
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
       # Collect all kernel and separately built modules
-      cp -ar ${CRAFT_STAGE}/kernel-modules   \
+      cp -ar ${CRAFT_STAGE}/kernel-modules \
         ${CRAFT_PART_INSTALL}/modules
-
-      find ${CRAFT_PART_INSTALL} -name \*.ko \
-        -exec ${CROSS_COMPILE}strip {} --strip-unneeded \;
 
       ln -frs ${CRAFT_PART_INSTALL} ${CRAFT_PART_INSTALL}/lib
       depmod -b ${CRAFT_PART_INSTALL} ${KVER}
