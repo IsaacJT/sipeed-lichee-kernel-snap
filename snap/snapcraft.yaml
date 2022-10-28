@@ -7,7 +7,7 @@ summary: A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 22
 description: |
   A Sipeed Lichee RV BSP board kernel for use with Ubuntu Core 22
 
-adopt-info: kernel
+adopt-info: version
 build-base: core22
 grade: stable
 confinement: strict
@@ -193,3 +193,12 @@ parts:
       mkimage \
           -f kernel_${CRAFT_TARGET_ARCH}.its \
           -r ${CRAFT_PART_INSTALL}/kernel.img
+
+  version:
+    plugin: nil
+    after:
+      - kernel
+    override-build: |
+      KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
+      craftctl set version="${KVER}"
+      craftctl set grade="devel"
