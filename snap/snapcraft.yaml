@@ -122,17 +122,17 @@ parts:
     source-branch: master
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
+      - ARCH: "riscv"
+      - CC: "gcc-12"
     build-packages:
       - make
       - ccache
-      # The kernel was built using gcc-12 and requires certain flags that are
-      # only available with that version
       - gcc-12
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
       make KSRC="${CRAFT_STAGE}/usr/src/linux-headers-${KVER}" -j $(nproc) \
-        CC="gcc-12" ARCH="riscv"
+        modules
 
       install -Dm0644 ${CRAFT_PART_BUILD}/8723ds.ko \
         -t ${CRAFT_PART_INSTALL}/kernel-modules/${KVER}/dkms/
