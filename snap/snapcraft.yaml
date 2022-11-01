@@ -12,7 +12,7 @@ build-base: core22
 grade: stable
 confinement: strict
 type: kernel
-compression: xz
+compression: lzo
 
 architectures:
   - build-on:
