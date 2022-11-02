@@ -20,6 +20,10 @@ architectures:
     build-for:
       - riscv64
 
+package-repositories:
+  - type: apt
+    ppa: itrue/rtl8723bt-firmware
+
 parts:
   kernel:
     plugin: nil
@@ -74,6 +78,7 @@ parts:
     stage-packages:
       - linux-firmware
       - wireless-regdb
+      - firmware-realtek-rtl8723-bt
     organize:
       lib/firmware: firmware
     stage:
