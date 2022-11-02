@@ -155,14 +155,6 @@ parts:
       ln -frs ${CRAFT_PART_INSTALL} ${CRAFT_PART_INSTALL}/lib
       depmod -b ${CRAFT_PART_INSTALL} ${KVER}
 
-  wlan-firmware:
-    plugin: dump
-    source: https://github.com/armbian/firmware.git
-    organize:
-      rtl_bt/rtl8723ds_*.bin: firmware/rtl_bt/
-    stage:
-      - firmware/rtl_bt
-
   overlays:
     plugin: nil
     source: overlays
