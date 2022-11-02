@@ -116,10 +116,10 @@ parts:
     after:
       - kernel
     plugin: nil
-    source: https://github.com/lwfinger/rtl8723ds.git
+    source: https://git.launchpad.net/ubuntu/+source/licheerv-rtl8723ds-dkms
     source-type: git
     source-depth: 1
-    source-branch: master
+    source-branch: applied/ubuntu/devel
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
       - ARCH: "riscv"
