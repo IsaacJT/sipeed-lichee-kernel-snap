@@ -132,6 +132,7 @@ parts:
       - make
       - ccache
       - gcc
+      - bc
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
