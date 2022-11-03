@@ -51,6 +51,7 @@ parts:
       - lz4
       - zstd
       - kmod
+      - cpio
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
