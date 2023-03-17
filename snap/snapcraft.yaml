@@ -20,10 +20,6 @@ architectures:
     build-for:
       - riscv64
 
-package-repositories:
-  - type: apt
-    ppa: itrue/rtl8723bt-firmware
-
 parts:
   kernel:
     plugin: nil
@@ -79,7 +75,12 @@ parts:
     stage-packages:
       - linux-firmware
       - wireless-regdb
-      - firmware-realtek-rtl8723-bt
+    override-build: |
+      craftctl build
+      ln -svr ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723d_config.bin \
+        ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723ds_config.bin
+      ln -svr ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723d_fw.bin \
+        ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723ds_fw.bin
     organize:
       lib/firmware: firmware
     stage:
