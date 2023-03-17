@@ -130,15 +130,21 @@ parts:
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
       - ARCH: "riscv"
+      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}"
     build-packages:
       - make
       - ccache
-      - gcc
       - bc
+      - on riscv64:
+        - gcc-12
+      - else:
+        - ${CRAFT_ARCH_TRIPLET}-gcc-12
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
-      make KSRC="${CRAFT_STAGE}/usr/src/linux-headers-${KVER}" -j $(nproc) \
+      # The kernel is built with gcc-12 so we need to match that here
+      make CC="${CRAFT_ARCH_TRIPLET}-gcc-12" -j $(nproc) \
+        KSRC="${CRAFT_STAGE}/usr/src/linux-headers-${KVER}" \
         modules
 
       install -Dm0644 ${CRAFT_PART_BUILD}/8723ds.ko \
