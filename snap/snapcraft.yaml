@@ -24,8 +24,8 @@ parts:
   kernel:
     plugin: nil
     stage-packages:
-      - linux-image-allwinner
-      - linux-headers-allwinner
+      - linux-image-allwinner:${CRAFT_TARGET_ARCH}
+      - linux-headers-allwinner:${CRAFT_TARGET_ARCH}
     organize:
       boot/vmlinuz*: vmlinuz
       lib/modules/*: kernel-modules/
@@ -73,8 +73,8 @@ parts:
   firmware:
     plugin: nil
     stage-packages:
-      - linux-firmware
-      - wireless-regdb
+      - linux-firmware:${CRAFT_TARGET_ARCH}
+      - wireless-regdb:${CRAFT_TARGET_ARCH}
     override-build: |
       craftctl build
       ln -svr ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723d_config.bin \
@@ -138,7 +138,7 @@ parts:
       - on riscv64:
         - gcc-12
       - else:
-        - ${CRAFT_ARCH_TRIPLET}-gcc-12
+        - gcc-12-${CRAFT_ARCH_TRIPLET}
     override-build: |
       KVER="$(basename ${CRAFT_STAGE}/kernel-modules/*-allwinner | cut -f1 -d/)"
 
