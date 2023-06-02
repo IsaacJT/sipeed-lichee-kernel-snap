@@ -76,7 +76,7 @@ parts:
       - linux-firmware:${CRAFT_TARGET_ARCH}
       - wireless-regdb:${CRAFT_TARGET_ARCH}
     override-build: |
-      craftctl build
+      craftctl default
       ln -svr ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723d_config.bin \
         ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723ds_config.bin
       ln -svr ${CRAFT_PART_INSTALL}/lib/firmware/rtl_bt/rtl8723d_fw.bin \
