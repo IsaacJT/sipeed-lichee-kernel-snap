@@ -130,7 +130,7 @@ parts:
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
       - ARCH: "riscv"
-      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}"
+      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
     build-packages:
       - make
       - ccache
